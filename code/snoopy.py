@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import re
 import sys
@@ -9,24 +8,14 @@ import importlib.util
 from pathlib import Path
 from collections import defaultdict
 
-STATIC_LICENSE_MAP = {
-    "numpy": ("BSD-3-Clause", "https://spdx.org/licenses/BSD-3-Clause.html"),
-    "scipy": ("BSD-3-Clause", "https://spdx.org/licenses/BSD-3-Clause.html"),
-    "matplotlib": ("PSF", "https://spdx.org/licenses/PSF-2.0.html"),
-    "pandas": ("BSD-3-Clause", "https://spdx.org/licenses/BSD-3-Clause.html"),
-    "requests": ("Apache-2.0", "https://spdx.org/licenses/Apache-2.0.html"),
-    "bark": ("Unknown", ""),
-}
-
-def get_package_license(package_name):
-    return STATIC_LICENSE_MAP.get(package_name.lower(), ("Unknown", ""))
-
 def is_std_lib(module_name):
     if module_name in sys.builtin_module_names:
         return True
     try:
         spec = importlib.util.find_spec(module_name)
-        return spec is not None and "site-packages" not in (spec.origin or "")
+        if spec is None or not spec.origin:
+            return False
+        return "site-packages" not in spec.origin
     except ModuleNotFoundError:
         return False
 
@@ -76,6 +65,44 @@ def classify_include(header):
     else:
         return "Unknown"
 
+def get_license_info(package_name):
+    try:
+        import importlib.metadata as metadata
+    except ImportError:
+        import importlib_metadata as metadata  # For Python < 3.8
+
+    try:
+        dist = metadata.metadata(package_name)
+        license_name = dist.get("License", "Unknown").strip()
+        if license_name.lower().startswith("bsd"):
+            license_url = "https://opensource.org/licenses/BSD-3-Clause"
+        elif "mit" in license_name.lower():
+            license_url = "https://opensource.org/licenses/MIT"
+        elif "apache" in license_name.lower():
+            license_url = "https://www.apache.org/licenses/LICENSE-2.0"
+        elif "gpl" in license_name.lower():
+            license_url = "https://www.gnu.org/licenses/gpl-3.0.html"
+        else:
+            license_url = "https://pypi.org/project/" + package_name + "/"
+        return license_name, license_url
+    except metadata.PackageNotFoundError:
+        return "Unknown", "https://pypi.org/project/" + package_name + "/"
+
+def show_help():
+    notebook_path = Path(__file__).resolve().parents[1] / "snoopy.ipynb"
+    print(f"""Usage: snoopy [file_or_folder]
+
+Examples:
+  snoopy my_script.py
+  snoopy my_project/
+
+Options:
+  -h, --help      Show this help message and exit
+
+📓 For examples and docs, see:
+  {notebook_path}
+""")
+
 def snoopy(path):
     path = Path(path)
     files = []
@@ -90,22 +117,19 @@ def snoopy(path):
     py_deps = defaultdict(set)
     cpp_deps = defaultdict(set)
 
-    print("🐾 Snoopy is sniffing out your dependencies...")
+    print("\U0001F43E Snoopy is sniffing out your dependencies...")
 
     for file in files:
-        print(f"\n📄 File: {file}")
+        print(f"\n\U0001F4C4 File: {file}")
         if file.suffix in [".py", ".ipynb"]:
             imports = extract_imports(file)
             for imp in sorted(imports):
                 if is_std_lib(imp):
                     py_deps['standard_lib'].add(imp)
                     source = "Standard Library"
-                elif imp in STATIC_LICENSE_MAP:
+                else:
                     py_deps['third_party'].add(imp)
                     source = "Third-Party"
-                else:
-                    py_deps['local_or_missing'].add(imp)
-                    source = "Local/Missing"
                 print(f"  {imp:<25} → {source}")
         elif file.suffix in [".c", ".cpp", ".h", ".hpp"]:
             code = file.read_text(errors='ignore')
@@ -116,56 +140,45 @@ def snoopy(path):
                 print(f"  {inc:<25} → {category}")
 
     if py_deps:
-        print("\n=== 🐍 Python Dependencies ===")
-        for key in ['standard_lib', 'third_party', 'local_or_missing']:
+        print("\n=== \U0001F40D Python Dependencies ===")
+        for key in ['standard_lib', 'third_party']:
             print(f"{key.replace('_', ' ').title()}:")
             for mod in sorted(py_deps[key]):
                 print(f"  - {mod}")
             print()
 
-        print("📦 Suggested requirements.txt with licenses:")
+        print("\U0001F4E6 Suggested requirements.txt with licenses:")
         with open("requirements.txt", "w") as f:
             for dep in sorted(py_deps['third_party']):
-                license_name, license_url = get_package_license(dep)
-                print(f"  {dep:<15} (License: {license_name}) {license_url}")
-                f.write(f"{dep}  # License: {license_name} {license_url}\n")
+                license_name, license_url = get_license_info(dep)
+                print(f"  {dep:<15} (License: {license_name}, {license_url})")
+                f.write(f"{dep}  # License: {license_name}, {license_url}\n")
 
     if cpp_deps:
-        print("\n=== 💻 C/C++ Dependencies ===")
+        print("\n=== \U0001F4BB C/C++ Dependencies ===")
         for key in ['Standard Library', 'Local or Third-Party', 'Unknown']:
             print(f"{key}:")
             for header in sorted(cpp_deps.get(key, [])):
                 print(f"  - {header}")
 
-    cpp_sources = [f.name for f in files if f.suffix == ".cpp"]
-    if cpp_sources:
-        print("🛠️ Suggested Makefile:")
-        print("-------------------------")
-        print("CXX = g++")
-        print("CXXFLAGS = -std=c++17 -Wall -O2\n")
-        print("TARGET = main")
-        print(f"SRCS = {' '.join(cpp_sources)}")
-        print("OBJS = $(SRCS:.cpp=.o)\n")
-        print("all: $(TARGET)\n")
-        print("$(TARGET): $(OBJS)")
-        print("\t$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)\n")
-        print("clean:")
-        print("\trm -f $(TARGET) $(OBJS)")
-        print("-------------------------")
+        cpp_sources = [f.name for f in files if f.suffix == ".cpp"]
+        if cpp_sources:
+            print("\U0001F6E0 Suggested Makefile:")
+            print("-------------------------")
+            print("CXX = g++")
+            print("CXXFLAGS = -std=c++17 -Wall -O2\n")
+            print("TARGET = main")
+            print(f"SRCS = {' '.join(cpp_sources)}")
+            print("OBJS = $(SRCS:.cpp=.o)\n")
+            print("all: $(TARGET)\n")
+            print("$(TARGET): $(OBJS)")
+            print("\t$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)\n")
+            print("clean:")
+            print("\trm -f $(TARGET) $(OBJS)")
+            print("-------------------------")
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        prog="snoopy",
-        description=(
-            "🐾 Snoopy - Annotate Python, Jupyter, and C/C++ dependencies\n\n"
-            "Scans imports and includes, categorizes dependencies, suggests requirements.txt and Makefile.\n"
-            "For more details and examples, see: /home/bob/tools/dev_utils/snoopy.ipynb"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    parser.add_argument("path", help="Path to a file or folder to scan")
-    args = parser.parse_args()
-    snoopy(args.path)
+    if len(sys.argv) < 2 or sys.argv[1] in {"-h", "--help"}:
+        show_help()
+    else:
+        snoopy(sys.argv[1])
