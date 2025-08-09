@@ -1,164 +1,88 @@
-# 🐾 Snoopy
+# 🐾 Snoopy - Python & C/C++ Dependency Analyzer
 
-**Snoopy** is a lightweight dependency annotation tool for Python, Jupyter Notebooks, and C/C++ projects. It scans your files and reports the libraries they import or include, categorized by source, and helps generate a Python `requirements.txt` file with license information.
+**Snoopy** is a command-line and notebook-friendly tool that helps you:
+- Identify Python & Jupyter Notebook imports
+- Detect C/C++ `#include` dependencies
+- Look up known licenses from a CSV
+- Generate a `requirements.txt`
+- Suggest Makefile targets (for C/C++
 
----
+🚀 Usage
+From Command Line
+bash
+Copy
+Edit
+python3 snoopy.py path/to/your/project
+Example:
 
-## 🚀 Features
+bash
+Copy
+Edit
+python3 snoopy.py ~/projects/my_analysis_notebook/
+From Jupyter Notebook
+python
+Copy
+Edit
+from snoopy import snoopy_entry_point
+snoopy_entry_point("/path/to/your/code_or_folder")
+📋 CSV Input Format (for pythonLicenses.csv)
+package	license
+pandas	BSD License
+numpy	BSD License
+torch	BSD-3-Clause
 
-✅ **Python & Jupyter Support**  
-- Parses `import` statements in `.py` and `.ipynb` files  
-- Differentiates between standard library, third-party, and local/missing modules  
-- Generates `requirements.txt` with license names and links
+## ✅ Features
 
-✅ **C/C++ Support**  
-- Parses `#include` statements from `.c`, `.cpp`, `.h`, and `.hpp` files  
-- Classifies headers as Standard Library, Local/Third-Party, or Unknown  
-- Suggests a `Makefile` if `.cpp` files are found
+### Detects:
 
-✅ **Project-Wide Analysis**  
-- Works recursively through directories  
-- Handles mixed-language projects  
+    * .py files
+    * .ipynb notebooks
+    * .c, .cpp, .h, .hpp files
 
-✅ **Clean Output**  
-- Color-coded, categorized CLI output  
-- Auto-generates `requirements.txt` with license info  
-- Shows Makefile suggestions for C++
+* Reads CSV to match licenses
+* Handles unknown modules gracefully
+* Prints suggested requirements.txt and Makefile targets
 
----
+### 🔧 Dependencies
+* Python 3.6+
+* nbformat (optional, for .ipynb parsing)
 
-## 📦 Installation
-
-### One-time setup:
-```bash
-# Deactivate snoopy environment first if active
-conda deactivate
-
-# Run install script (assumes snoopy.py is in ./code)
-bash install_snoopy.sh
-```
-
-This will:
-- Copy `code/snoopy.py` to `~/tools/dev_utils/snoopy`
-- Make it executable
-- Create a symlink at `~/.local/bin/snoopy`
-
-Add to your path if needed:
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
----
-
-## 🧪 Usage
+Install nbformat:
 
 ```bash
-# Analyze a single file
-snoopy my_script.py
+pip install nbformat
 
-# Analyze a Jupyter notebook
-snoopy notebook.ipynb
-
-# Analyze an entire folder recursively
-snoopy my_project/
 ```
 
----
 
-## 📌 Example Output
+## 💡 Use Case
+Snoopy can be used to auto-generate documentation sections of a repo like:
 
-```text
-🐾 Snoopy is sniffing out your dependencies...
+### Dependencies
 
-📄 File: examples/podcastGenerator/podGen.py
-  bark                      → Local/Missing
-  os                        → Standard Library
-  re                        → Standard Library
-  scipy                     → Third-Party
-  warnings                  → Standard Library
-
-=== 🐍 Python Dependencies ===
-Standard Lib:
-  - os
-  - re
-  - warnings
-
-Third Party:
-  - scipy
-
-Local Or Missing:
-  - bark
-
-📦 Suggested requirements.txt with licenses:
-  scipy            (License: BSD License, https://opensource.org/licenses/BSD-3-Clause)
-```
-
----
-
-### 🛠️ Example C++ Output
-
-```text
-📄 File: examples/math_demo.cpp
-  cmath                    → Standard Library
-  iostream                 → Standard Library
-
-=== 💻 C/C++ Dependencies ===
-Standard Library:
-  - cmath
+- Python
+  - pandas (BSD)
+  - numpy (BSD)
+- C++
   - iostream
+  - vector
 
-🛠️ Suggested Makefile:
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -O2
+This makes it easier to:
 
-TARGET = main
-SRCS = math_demo.cpp
-OBJS = $(SRCS:.cpp=.o)
+* Build OSS-compliant documentation
 
-all: $(TARGET)
+* Audit open-source projects
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+* Auto-generate requirements.txt and Makefile templates
 
-clean:
-	rm -f $(TARGET) $(OBJS)
-```
+## 📦 Folder Structure
 
+```bash
+snoopy/
+├── snoopy.py                   # Main tool entry point
+├── pythonLicenses.csv          # CSV with known Python license info
+├── license_lookup_results.csv  # Optional LLM-enriched lookup CSV
+├── *.ipynb                     # Your supporting notebooks or examples
+├── pythonLicense*.csv          # Snapshots from earlier runs
 ---
-
-## 🧠 Notes
-
-- Python license data is looked up using `importlib.metadata` (static analysis only)
-- Missing modules do not stop execution — just flagged as `Local/Missing`
-- You should still verify versions for production `requirements.txt`
-
----
-
-## 🧩 Future Ideas
-
-- JavaScript/HTML parsing support
-- Optional dependency graph visualization
-- Package version auto-resolution (static)
-
----
-
-## 🐍 Recommended Workflow
-
-1. Activate your env:
-   ```bash
-   mamba activate snoopy
-   ```
-
-2. Scan your project:
-   ```bash
-   snoopy path/to/project/
-   ```
-
-3. Review output + generated `requirements.txt`
-
----
-
-## 👋 Author
-
-Bob Chesebrough with help from ChatGPT Built for developers and educators by someone who hates dependency surprises 🧪🐾
+s from earlier runs
