@@ -1,79 +1,95 @@
 # 🐾 Snoopy - Python & C/C++ Dependency Analyzer
 
-**Snoopy** is a command-line and notebook-friendly tool that helps you:
-- Identify Python & Jupyter Notebook imports
-- Detect C/C++ `#include` dependencies
-- Look up known licenses from a CSV
-- Generate a `requirements.txt`
-- Suggest Makefile targets (for C/C++
+## Overview
 
-🚀 Usage
-From Command Line
-bash
-Copy
-Edit
-python3 snoopy.py path/to/your/project
-Example:
+**Snoopy** is a developer tool for scanning Python (.py, .ipynb) and C/C++ (.c, .cpp, .h) source files to:
+- Identify imported packages or included headers.
+- Look up license information for Python packages (via pythonLicenses.csv).
+- Suggest requirements.txt entries for Python projects.
+- Suggest boilerplate Makefiles for C/C++ projects.
 
-bash
-Copy
-Edit
-python3 snoopy.py ~/projects/my_analysis_notebook/
-From Jupyter Notebook
-python
-Copy
-Edit
-from snoopy import snoopy_entry_point
-snoopy_entry_point("/path/to/your/code_or_folder")
-📋 CSV Input Format (for pythonLicenses.csv)
-package	license
-pandas	BSD License
-numpy	BSD License
-torch	BSD-3-Clause
+## Features
+- **Python analysis**: Lists all imported packages and their licenses.
+- **Jupyter Notebook analysis**: Scans code cells for imports.
+- **C/C++ analysis**: Lists all #include headers.
+- **Makefile suggestion**: Generates a BLAS-enabled Makefile for .cpp files.
+- **requirements.txt generation** for Python projects.
+- **License lookup** from *pythonLicenses.csv*, which can be kept up-to-date using the sister project . [licenseLookupRAG](https://github.com/zmadscientist/pythonLicenseDB)
 
-## ✅ Features
+## Prerequisites
+- Python 3.8+
+- *pythonLicenses.csv* in the same directory as snoopy.py
 
-### Detects:
+## Python Dependencies:
+```bash
+pip install nbformat beautifulsoup4
+```
 
-    * .py files
-    * .ipynb notebooks
-    * .c, .cpp, .h, .hpp files
 
-* Reads CSV to match licenses
-* Handles unknown modules gracefully
-* Prints suggested requirements.txt and Makefile targets
+## Recommended: 
+- Keep your *pythonLicenses.csv* up to date using [licenseLookupRAG](https://github.com/zmadscientist/pythonLicenseDB).
 
-### 🔧 Dependencies
-* Python 3.6+
-* nbformat (optional, for .ipynb parsing)
+-------
 
-Install nbformat:
+## 🚀 Usage 
+
+### Scan a single Python file:
 
 ```bash
-pip install nbformat
-
+python snoopy.py my_script.py
 ```
 
+### Scan a Jupyter notebook:
 
-## 💡 Use Case
-Snoopy can be used to auto-generate documentation sections of a repo like:
+```bash
+python snoopy.py analysis.ipynb
+```
 
-### Dependencies
+### Scan a C++ file and get Makefile suggestion:
 
-- Python
-  - pandas (BSD)
-  - numpy (BSD)
-- C++
-  - iostream
-  - vector
+```bash
+python snoopy.py matrix_mul.cpp
+```
 
-This makes it easier to:
+### Scan an entire project directory:
 
-* Build OSS-compliant documentation
+```bash
+python snoopy.py /path/to/project
+``` 
 
-* Audit open-source projects
+-------
 
-* Auto-generate requirements.txt and Makefile templates
+## Output Examples
+
+### Python example:
+
+```bash
+=== 🐍 Python Dependencies ===
+📄 my_script.py
+  numpy                → BSD
+  requests             → Apache-2.0
+
+📦 Suggested requirements.txt:
+numpy
+requests
+```
+
+### C++ example:
+
+```bash
+📄 matrix_mul.cpp
+  #include <iostream>
+  #include <cblas.h>
+
+🛠 Suggested Makefile:
+
+CXX = g++
+CXXFLAGS = -Wall -O2
+LDFLAGS = -lblas
+TARGET = matrix_mul
+OBJS = matrix_mul.o
+```
+-----
 
 ## 📦 Folder Structure
 
@@ -84,5 +100,11 @@ snoopy/
 ├── license_lookup_results.csv  # Optional LLM-enriched lookup CSV
 ├── *.ipynb                     # Your supporting notebooks or examples
 ├── pythonLicense*.csv          # Snapshots from earlier runs
----
-s from earlier runs
+```
+
+-------
+## Credits
+
+#### Created by Bob Chesebrough, with code refinement assistance from ChatGPT.
+
+runs
