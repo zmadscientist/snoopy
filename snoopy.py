@@ -31,8 +31,11 @@ def summarize_imports(import_dict, makefile_suggestions=None):
         if suffix in [".py", ".ipynb"]:
             print(f"📄 {file}")
             for imp in sorted(imports):
-                impStr = str(imp).lower()
-                license_info = lookup[impStr]['license'] # <-- your original license lookup logic
+                impStr = str(imp.split('.')[0]).lower()
+                try:
+                    license_info = lookup[impStr]['license'] # <-- your original license lookup logic
+                except:
+                    print(f"  {imp} → {license_info}")
                 print(f"  {imp} → {license_info}")
 
         elif suffix in [".c", ".cpp"]:
@@ -68,8 +71,8 @@ def summarize_imports(import_dict, makefile_suggestions=None):
 def parse_python_file(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         node = ast.parse(f.read(), filename=filepath)
-    return sorted({n.name for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names} |
-                  {n.module for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module})
+    return sorted({n.name.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names} |
+                  {n.module.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module})
 
 def parse_ipynb_file(filepath):
     try:
@@ -84,8 +87,8 @@ def parse_ipynb_file(filepath):
         if cell.cell_type == "code":
             try:
                 node = ast.parse(cell.source)
-                imports |= {n.name for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names}
-                imports |= {n.module for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module}
+                imports |= {n.name.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names}
+                imports |= {n.module.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module}
             except:
                 pass
     return sorted(imports)
