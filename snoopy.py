@@ -35,8 +35,7 @@ def summarize_imports(import_dict, makefile_suggestions=None):
                 try:
                     license_info = lookup[impStr]['license'] # <-- your original license lookup logic
                 except:
-                    print(f"  {imp} → {license_info}")
-                print(f"  {imp} → {license_info}")
+                    print(f"  {imp}  {impStr}")
 
         elif suffix in [".c", ".cpp"]:
             print(f"📄 {file}")
