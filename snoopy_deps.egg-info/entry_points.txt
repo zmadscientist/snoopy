@@ -1,0 +1,2 @@
+[console_scripts]
+snoopy = snoopy:main

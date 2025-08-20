@@ -7,6 +7,19 @@ import ast
 import csv
 import re
 from pathlib import Path
+import subprocess
+
+def show_readme():
+    readme_path = os.path.join(os.path.dirname(__file__), "README.md")
+    if not os.path.exists(readme_path):
+        print("README.md not found in snoopy directory.")
+        sys.exit(1)
+
+    # Try to use `bat` or `less` if available for nicer display
+    try:
+        subprocess.run(["bat", "--paging=always", readme_path], check=True)
+    except FileNotFoundError:
+        subprocess.run(["less", readme_path])
 
 lookup = {}
 
@@ -188,11 +201,20 @@ def snoopy_entry_point(path):
     summarize_imports(all_imports)
 
 def main():
+    
     parser = argparse.ArgumentParser(description="Snoopy 🐾 - Python/C++ Dependency Analyzer")
-    parser.add_argument("path", help="File or directory to scan")
+    parser.add_argument("path", nargs="?", help="File or directory to scan")  # <-- now optional
+    parser.add_argument("--readme", action="store_true", help="Show the README.md for snoopy")
     args = parser.parse_args()
+    if args.readme:
+        show_readme()
+        sys.exit(0)
+        
     print("Snoopy is running...")
     lookup = load_license_lookup(csv_path="pythonLicenses.csv")
+    if args.readme:
+        show_readme()
+        return
     snoopy_entry_point(args.path)
 
 if __name__ == "__main__":

@@ -1,0 +1,115 @@
+<h1 id="snoopy---python-cc-dependency-analyzer">🐾 Snoopy - Python &amp;
+C/C++ Dependency Analyzer</h1>
+<h2 id="overview">Overview</h2>
+<p><strong>Snoopy</strong> is a developer tool for scanning Python (.py,
+.ipynb) and C/C++ (.c, .cpp, .h) source files to: - Identify imported
+packages or included headers. - Look up license information for Python
+packages (via pythonLicenses.csv). - Suggest requirements.txt entries
+for Python projects. - Suggest boilerplate Makefiles for C/C++
+projects.</p>
+<h2 id="features">Features</h2>
+<ul>
+<li><strong>Python analysis</strong>: Lists all imported packages and
+their licenses.</li>
+<li><strong>Jupyter Notebook analysis</strong>: Scans code cells for
+imports.</li>
+<li><strong>C/C++ analysis</strong>: Lists all #include headers.</li>
+<li><strong>Makefile suggestion</strong>: Generates a BLAS-enabled
+Makefile for .cpp files.</li>
+<li><strong>requirements.txt generation</strong> for Python
+projects.</li>
+<li><strong>License lookup</strong> from <em>pythonLicenses.csv</em>,
+which can be kept up-to-date using the sister project . <a
+href="https://github.com/zmadscientist/pythonLicenseDB">licenseLookupRAG</a></li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Python 3.8+</li>
+<li><em>pythonLicenses.csv</em> in the same directory as snoopy.py</li>
+</ul>
+<h2 id="python-dependencies">Python Dependencies:</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install nbformat beautifulsoup4</span></code></pre></div>
+<h2 id="recommended">Recommended:</h2>
+<ul>
+<li>Keep your <em>pythonLicenses.csv</em> up to date using <a
+href="https://github.com/zmadscientist/pythonLicenseDB">licenseLookupRAG</a>.</li>
+</ul>
+<hr />
+<h2 id="usage">🚀 Usage</h2>
+<h3 id="scan-a-single-python-file">Scan a single Python file:</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> snoopy.py my_script.py</span></code></pre></div>
+<h3 id="scan-a-jupyter-notebook">Scan a Jupyter notebook:</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> snoopy.py analysis.ipynb</span></code></pre></div>
+<h3 id="scan-a-c-file-and-get-makefile-suggestion">Scan a C++ file and
+get Makefile suggestion:</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> snoopy.py matrix_mul.cpp</span></code></pre></div>
+<h3 id="scan-an-entire-project-directory">Scan an entire project
+directory:</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> snoopy.py /path/to/project</span></code></pre></div>
+<hr />
+<h2 id="output-examples">Output Examples</h2>
+<h3 id="python-example">Python example:</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">===</span> 🐍 Python Dependencies ===</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">📄</span> my_script.py</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">numpy</span>                → BSD</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">requests</span>             → Apache-2.0</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">📦</span> Suggested requirements.txt:</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">numpy</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">requests</span></span></code></pre></div>
+<h3 id="c-example">C++ example:</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">📄</span> matrix_mul.cpp</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">#include &lt;iostream&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#include &lt;cblas.h&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">🛠</span> Suggested Makefile:</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="ex">CXX</span> = g++</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">CXXFLAGS</span> = <span class="at">-Wall</span> <span class="at">-O2</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">LDFLAGS</span> = <span class="at">-lblas</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">TARGET</span> = matrix_mul</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">OBJS</span> = matrix_mul.o</span></code></pre></div>
+<hr />
+<h2 id="folder-structure">📦 Folder Structure</h2>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">snoopy/</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> snoopy.py                   <span class="co"># Main tool entry point</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> pythonLicenses.csv          <span class="co"># CSV with known Python license info</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> license_lookup_results.csv  <span class="co"># Optional LLM-enriched lookup CSV</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> <span class="pp">*</span>.ipynb                     <span class="co"># Your supporting notebooks or examples</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> pythonLicense<span class="pp">*</span>.csv          <span class="co"># Snapshots from earlier runs</span></span></code></pre></div>
+<table style="width:11%;">
+<colgroup>
+<col style="width: 11%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>## Quick Setup &amp; Installation Notes (for future me)</td>
+</tr>
+<tr class="even">
+<td>When coming back to <code>snoopy</code>, here are the steps to get
+the CLI working again:</td>
+</tr>
+<tr class="odd">
+<td>### 1. Softlinks (optional convenience) If you want to run
+<code>snoopy.py</code> without installing, create a symlink to a
+directory on your <code>$PATH</code>:</td>
+</tr>
+<tr class="even">
+<td>```bash ln -s /home/bob/examples/snoopy/snoopy.py
+~/tools/dev_utils/snoopy chmod +x ~/tools/dev_utils/snoopy</td>
+</tr>
+</tbody>
+</table>
+<h2 id="credits">Credits</h2>
+<h4
+id="created-by-bob-chesebrough-with-code-refinement-assistance-from-chatgpt.">Created
+by Bob Chesebrough, with code refinement assistance from ChatGPT.</h4>
+<p>runs</p>

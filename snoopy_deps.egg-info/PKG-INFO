@@ -1,0 +1,119 @@
+Metadata-Version: 2.4
+Name: snoopy-deps
+Version: 0.1.0
+Summary: Python & C/C++ dependency analyzer
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: nbformat
+
+# 🐾 Snoopy - Python & C/C++ Dependency Analyzer
+
+## Overview
+
+**Snoopy** is a developer tool for scanning Python (.py, .ipynb) and C/C++ (.c, .cpp, .h) source files to:
+- Identify imported packages or included headers.
+- Look up license information for Python packages (via pythonLicenses.csv).
+- Suggest requirements.txt entries for Python projects.
+- Suggest boilerplate Makefiles for C/C++ projects.
+
+## Features
+- **Python analysis**: Lists all imported packages and their licenses.
+- **Jupyter Notebook analysis**: Scans code cells for imports.
+- **C/C++ analysis**: Lists all #include headers.
+- **Makefile suggestion**: Generates a BLAS-enabled Makefile for .cpp files.
+- **requirements.txt generation** for Python projects.
+- **License lookup** from *pythonLicenses.csv*, which can be kept up-to-date using the sister project . [licenseLookupRAG](https://github.com/zmadscientist/pythonLicenseDB)
+
+## Prerequisites
+- Python 3.8+
+- *pythonLicenses.csv* in the same directory as snoopy.py
+
+## Python Dependencies:
+```bash
+pip install nbformat beautifulsoup4
+```
+
+
+
+## Recommended: 
+- Keep your *pythonLicenses.csv* up to date using [licenseLookupRAG](https://github.com/zmadscientist/pythonLicenseDB).
+
+-------
+
+## 🚀 Usage 
+
+### Scan a single Python file:
+
+```bash
+python snoopy.py my_script.py
+```
+
+### Scan a Jupyter notebook:
+
+```bash
+python snoopy.py analysis.ipynb
+```
+
+### Scan a C++ file and get Makefile suggestion:
+
+```bash
+python snoopy.py matrix_mul.cpp
+```
+
+### Scan an entire project directory:
+
+```bash
+python snoopy.py /path/to/project
+``` 
+
+-------
+
+## Output Examples
+
+### Python example:
+
+```bash
+=== 🐍 Python Dependencies ===
+📄 my_script.py
+  numpy                → BSD
+  requests             → Apache-2.0
+
+📦 Suggested requirements.txt:
+numpy
+requests
+```
+
+### C++ example:
+
+```bash
+📄 matrix_mul.cpp
+  #include <iostream>
+  #include <cblas.h>
+
+🛠 Suggested Makefile:
+
+CXX = g++
+CXXFLAGS = -Wall -O2
+LDFLAGS = -lblas
+TARGET = matrix_mul
+OBJS = matrix_mul.o
+```
+-----
+
+## 📦 Folder Structure
+
+```bash
+snoopy/
+├── snoopy.py                   # Main tool entry point
+├── pythonLicenses.csv          # CSV with known Python license info
+├── license_lookup_results.csv  # Optional LLM-enriched lookup CSV
+├── *.ipynb                     # Your supporting notebooks or examples
+├── pythonLicense*.csv          # Snapshots from earlier runs
+```
+
+-------
+## Credits
+
+#### Created by Bob Chesebrough, with code refinement assistance from ChatGPT.
+
+runs
