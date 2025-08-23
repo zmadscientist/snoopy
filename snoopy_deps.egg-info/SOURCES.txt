@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-snoopy.py
-snoopy_deps.egg-info/PKG-INFO
-snoopy_deps.egg-info/SOURCES.txt
-snoopy_deps.egg-info/dependency_links.txt
-snoopy_deps.egg-info/entry_points.txt
-snoopy_deps.egg-info/requires.txt
-snoopy_deps.egg-info/top_level.txt

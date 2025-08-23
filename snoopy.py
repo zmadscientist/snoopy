@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+# snoopy.py
+from __future__ import annotations
 import os
 import sys
 import argparse
@@ -8,18 +9,6 @@ import csv
 import re
 from pathlib import Path
 import subprocess
-
-def show_readme():
-    readme_path = os.path.join(os.path.dirname(__file__), "README.md")
-    if not os.path.exists(readme_path):
-        print("README.md not found in snoopy directory.")
-        sys.exit(1)
-
-    # Try to use `bat` or `less` if available for nicer display
-    try:
-        subprocess.run(["bat", "--paging=always", readme_path], check=True)
-    except FileNotFoundError:
-        subprocess.run(["less", readme_path])
 
 lookup = {}
 
@@ -199,23 +188,91 @@ def snoopy_entry_point(path):
                 all_imports[str(file)] = imports
 
     summarize_imports(all_imports)
+    
+import argparse
+
+DEFAULT_CSV_NAME = "pythonLicenses.csv"
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        prog="snoopy",
+        description="Dependency and license finder for .py/.ipynb (and friends).",
+    )
+    p.add_argument(
+        "--csv", metavar="FILE",
+        help="Full path to licenses CSV (overrides everything)."
+    )
+    p.add_argument(
+        "--license-dir", metavar="DIR",
+        help=f"Directory containing {DEFAULT_CSV_NAME}."
+    )
+    p.add_argument(
+        "targets", nargs="*", default=["."],
+        help="Files/dirs to scan (default: current directory)"
+    )
+    return p.parse_args()
+
+from pathlib import Path
+
+DEFAULT_CSV_NAME = "pythonLicenses.csv"  # keep consistent with parse_args above
+
+def resolve_csv_from_args(args) -> Path:
+    # 1) --csv FILE wins if provided
+    if args.csv:
+        return Path(args.csv).expanduser().resolve()
+
+    # 2) --license-dir DIR -> DIR/pythonLicenses.csv
+    if args.license_dir:
+        return (Path(args.license_dir).expanduser().resolve() / DEFAULT_CSV_NAME)
+
+    # 3) Fallback: next to this script
+    return Path(__file__).resolve().parent / DEFAULT_CSV_NAME
+
+
+
+def resolve_data_csv(args, name="pythonLicenses.csv") -> Path:
+    """Resolve CSV by priority: CLI file > CLI dir > env file > env dir > fallback."""
+    # 1) CLI file
+    if args.csv_path:
+        return Path(args.csv_path)
+
+    # 2) CLI dir
+    if args.data_dir:
+        return Path(args.data_dir) / name
+
+    # 3) Env vars
+    env_file = os.environ.get("SNOOPY_CSV_PATH")
+    if env_file:
+        return Path(env_file)
+
+    env_dir = os.environ.get("SNOOPY_DATA_DIR")
+    if env_dir:
+        return Path(env_dir) / name
+
+    # 4) Fallback near this file (repo layout)
+    here = Path(__file__).resolve().parent
+    # Adjust if your file lives elsewhere
+    return here / "data" / name
 
 def main():
-    
-    parser = argparse.ArgumentParser(description="Snoopy 🐾 - Python/C++ Dependency Analyzer")
-    parser.add_argument("path", nargs="?", help="File or directory to scan")  # <-- now optional
-    parser.add_argument("--readme", action="store_true", help="Show the README.md for snoopy")
-    args = parser.parse_args()
-    if args.readme:
-        show_readme()
-        sys.exit(0)
-        
+    args = parse_args()
+    csv_path = resolve_csv_from_args(args)
+
+    if not csv_path.exists():
+        print(f"[snoopy] CSV not found: {csv_path}", file=sys.stderr)
+        print("Tip: use --csv FILE or --license-dir DIR (which must contain pythonLicenses.csv).", file=sys.stderr)
+        sys.exit(2)
+
     print("Snoopy is running...")
-    lookup = load_license_lookup(csv_path="pythonLicenses.csv")
-    if args.readme:
-        show_readme()
-        return
-    snoopy_entry_point(args.path)
+
+    # If you already had: lookup = load_license_lookup(csv_path="pythonLicenses.csv")
+    # change it to:
+    lookup = load_license_lookup(csv_path=str(csv_path))
+
+    # Do NOT change your snoopy_entry_point signature if it didn't accept extra args
+    for t in (args.targets or ["."]):
+        snoopy_entry_point(str(Path(t).resolve()))
+
 
 if __name__ == "__main__":
     main()
