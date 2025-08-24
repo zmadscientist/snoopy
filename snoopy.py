@@ -12,68 +12,81 @@ import subprocess
 
 lookup = {}
 
-def load_license_lookup(csv_path="pythonLicenses.csv"):
-    global __Version__ 
+# ------------------------
+# CSV LOADING / ARG PARSE
+# ------------------------
+
+DEFAULT_CSV_NAME = "pythonLicenses.csv"
+
+def load_license_lookup(csv_path: str = DEFAULT_CSV_NAME):
+    """
+    Load the license CSV into a dict-of-dicts keyed by 'package'.
+    Honors the csv_path passed in.
+    """
+    csv_path = Path(csv_path).expanduser().resolve()
+    if not csv_path.exists():
+        raise FileNotFoundError(f"License CSV not found: {csv_path}")
 
     dict_of_dicts = {}
-    with open('pythonLicenses.csv', mode='r', encoding='utf-8') as csv_file:
+    with csv_path.open(mode='r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
-            dict_of_dicts[row['package']] = row
+            pkg = (row.get('package') or '').strip()
+            if pkg:
+                dict_of_dicts[pkg.lower()] = row  # normalize key to lower
     return dict_of_dicts
 
 
-def summarize_imports(import_dict, makefile_suggestions=None):
-    # summarize the imports I have used
-    print("=== 🐍 Package or file dependencies ===")
-    for file, imports in import_dict.items():
-        suffix = Path(file).suffix
+def parse_args():
+    p = argparse.ArgumentParser(
+        prog="snoopy",
+        description="Dependency and license finder for .py/.ipynb (and friends).",
+    )
+    p.add_argument(
+        "--csv", metavar="FILE",
+        help="Full path to licenses CSV (overrides everything)."
+    )
+    p.add_argument(
+        "--license-dir", metavar="DIR",
+        help=f"Directory containing {DEFAULT_CSV_NAME}."
+    )
+    p.add_argument(
+        "targets", nargs="*", default=["."],
+        help="Files/dirs to scan (default: current directory)"
+    )
+    return p.parse_args()
 
-        # Handle Python and Jupyter files
-        if suffix in [".py", ".ipynb"]:
-            print(f"📄 {file}")
-            for imp in sorted(imports):
-                impStr = str(imp.split('.')[0]).lower()
-                try:
-                    license_info = lookup[impStr]['license'] # <-- your original license lookup logic
-                except:
-                    print(f"  {imp}  {impStr}")
 
-        elif suffix in [".c", ".cpp"]:
-            print(f"📄 {file}")
-            
-            flat_imports = []
-            for imp in imports:
-                if isinstance(imp, list):
-                    flat_imports.extend(imp)
-                else:
-                    flat_imports.append(imp)
-        
-            for header in sorted(flat_imports):
-                print(f"  #include <{header}>")
-        
-            if makefile_suggestions and file in makefile_suggestions:
-                print("\n🛠 Suggested Makefile:\n")
-                print(makefile_suggestions[file])
-        
-        else:
-            print(f"📄 {file}")
-            print("  ❓ Unknown file type — skipped")
 
-    # make suggestions for requirements.txt (only for Python files)
-    all_deps = sorted({imp for file, deps in import_dict.items()
-                       if Path(file).suffix in [".py", ".ipynb"]
-                       for imp in deps})
-    if all_deps:
-        print("\n📦 Suggested requirements.txt:")
-        for dep in all_deps:
-            print(dep)
+def resolve_csv_from_args(args) -> Path:
+    # 1) --csv FILE wins if provided
+    if args.csv:
+        return Path(args.csv).expanduser().resolve()
+
+    # 2) --license-dir DIR -> DIR/pythonLicenses.csv
+    if args.license_dir:
+        return (Path(args.license_dir).expanduser().resolve() / DEFAULT_CSV_NAME)
+
+    # 3) Look in a "licenses" subdir next to snoopy.py
+    candidate = Path(__file__).resolve().parent / "licenses" / DEFAULT_CSV_NAME
+    if candidate.exists():
+        return candidate
+
+    # 4) Fallback: next to snoopy.py
+    return Path(__file__).resolve().parent / DEFAULT_CSV_NAME
+
+# ------------------------
+# PARSERS
+# ------------------------
 
 def parse_python_file(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         node = ast.parse(f.read(), filename=filepath)
-    return sorted({n.name.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names} |
-                  {n.module.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module})
+    return sorted(
+        {n.name.split('.')[0] for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names}
+        |
+        {n.module.split('.')[0] for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module}
+    )
 
 def parse_ipynb_file(filepath):
     try:
@@ -88,17 +101,15 @@ def parse_ipynb_file(filepath):
         if cell.cell_type == "code":
             try:
                 node = ast.parse(cell.source)
-                imports |= {n.name.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names}
-                imports |= {n.module.split('.')[0]  for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module}
-            except:
+                imports |= {n.name.split('.')[0] for n in ast.walk(node) if isinstance(n, ast.Import) for n in n.names}
+                imports |= {n.module.split('.')[0] for n in ast.walk(node) if isinstance(n, ast.ImportFrom) and n.module}
+            except Exception:
                 pass
     return sorted(imports)
 
-    return sorted(includes)
-
 def parse_c_cpp_file(filepath):
     """
-    Parses a C++ source or header file to extract included headers and suggest a Makefile.
+    Parses a C/C++ source or header file to extract included headers and suggest a Makefile.
 
     Returns:
         includes: List of included headers (standard or local)
@@ -141,26 +152,88 @@ $(TARGET): $(OBJS)
 clean:
 \trm -f $(TARGET) $(OBJS)
 """
-
     except Exception as e:
         print(f"Error parsing {filepath}: {e}")
 
     return includes, makefile_suggestion
 
 
+# ------------------------
+# REPORTING
+# ------------------------
+
+def summarize_imports(import_dict, makefile_suggestions=None):
+    # summarize the imports I have used
+    print("=== 🐍 Package or file dependencies ===")
+    for file, imports in import_dict.items():
+        suffix = Path(file).suffix
+
+        # Handle Python and Jupyter files
+        if suffix in [".py", ".ipynb"]:
+            print(f"📄 {file}")
+            for imp in sorted(imports):
+                impStr = str(imp.split('.')[0]).lower()
+                try:
+                    license_info = lookup.get(impStr, {}).get('license')
+                    if license_info:
+                        print(f"  {imp} — {license_info}")
+                    else:
+                        print(f"  {imp}")
+                except Exception:
+                    print(f"  {imp}")
+
+        elif suffix in [".c", ".cpp"]:
+            print(f"📄 {file}")
+
+            # imports may be a list (includes) OR a tuple (includes, mkfile) if caller didn't flatten
+            flat_imports = []
+            if isinstance(imports, tuple):
+                flat, _ = imports
+                imports = flat
+            for imp in imports:
+                if isinstance(imp, list):
+                    flat_imports.extend(imp)
+                else:
+                    flat_imports.append(imp)
+
+            for header in sorted(flat_imports):
+                print(f"  #include <{header}>")
+
+            if makefile_suggestions and file in makefile_suggestions and makefile_suggestions[file]:
+                print("\n🛠 Suggested Makefile:\n")
+                print(makefile_suggestions[file])
+
+        else:
+            print(f"📄 {file}")
+            print("  ❓ Unknown file type — skipped")
+
+    # make suggestions for requirements.txt (only for Python files)
+    all_deps = sorted({
+        imp for file, deps in import_dict.items()
+        if Path(file).suffix in [".py", ".ipynb"]
+        for imp in deps
+    })
+    if all_deps:
+        print("\n📦 Suggested requirements.txt:")
+        for dep in all_deps:
+            print(dep)
+
+
+# ------------------------
+# DRIVER
+# ------------------------
 
 def snoopy_entry_point(path):
-    global lookup 
-    print(f"snoopy_entry_point is running ...")
-    lookup = load_license_lookup(csv_path="pythonLicenses.csv")
+    """
+    Scans a file or directory. Relies on the global `lookup` already loaded in `main()`.
+    """
+    print("snoopy_entry_point is running ...")
     all_imports = {}
+    makefile_suggestions = {}
 
     path = Path(path)
     if path.is_file():
-        # Handle a single file
-        ext = path.suffix
-        print(f"snoopy_entry_pointext  {ext}")
-        print("(*** Bob: ", ext)
+        ext = path.suffix.lower()
         if ext == ".py":
             imports = parse_python_file(path)
             all_imports[str(path)] = imports
@@ -168,93 +241,34 @@ def snoopy_entry_point(path):
             imports = parse_ipynb_file(path)
             all_imports[str(path)] = imports
         elif ext in [".c", ".cpp", ".h"]:
-            print("got to if cpp")
-            imports = parse_c_cpp_file(path)
-            all_imports[str(path)] = imports
+            includes, mk = parse_c_cpp_file(path)
+            all_imports[str(path)] = includes
+            if mk:
+                makefile_suggestions[str(path)] = mk
         else:
             print(f"⚠️ Unsupported file type: {ext}")
     else:
-        # Handle a directory
+        # directory walk
         for file in path.rglob("*"):
-            if file.suffix == ".py":
+            ext = file.suffix.lower()
+            if ext == ".py":
                 imports = parse_python_file(file)
                 all_imports[str(file)] = imports
-            elif file.suffix == ".ipynb":
+            elif ext == ".ipynb":
                 imports = parse_ipynb_file(file)
                 all_imports[str(file)] = imports
-            elif file.suffix in [".c", ".cpp", ".h"]:
-                print("got to else cpp")
-                imports = parse_c_cpp_file(file)
-                all_imports[str(file)] = imports
+            elif ext in [".c", ".cpp", ".h"]:
+                includes, mk = parse_c_cpp_file(file)
+                all_imports[str(file)] = includes
+                if mk:
+                    makefile_suggestions[str(file)] = mk
 
-    summarize_imports(all_imports)
-    
-import argparse
+    summarize_imports(all_imports, makefile_suggestions=makefile_suggestions)
 
-DEFAULT_CSV_NAME = "pythonLicenses.csv"
-
-def parse_args():
-    p = argparse.ArgumentParser(
-        prog="snoopy",
-        description="Dependency and license finder for .py/.ipynb (and friends).",
-    )
-    p.add_argument(
-        "--csv", metavar="FILE",
-        help="Full path to licenses CSV (overrides everything)."
-    )
-    p.add_argument(
-        "--license-dir", metavar="DIR",
-        help=f"Directory containing {DEFAULT_CSV_NAME}."
-    )
-    p.add_argument(
-        "targets", nargs="*", default=["."],
-        help="Files/dirs to scan (default: current directory)"
-    )
-    return p.parse_args()
-
-from pathlib import Path
-
-DEFAULT_CSV_NAME = "pythonLicenses.csv"  # keep consistent with parse_args above
-
-def resolve_csv_from_args(args) -> Path:
-    # 1) --csv FILE wins if provided
-    if args.csv:
-        return Path(args.csv).expanduser().resolve()
-
-    # 2) --license-dir DIR -> DIR/pythonLicenses.csv
-    if args.license_dir:
-        return (Path(args.license_dir).expanduser().resolve() / DEFAULT_CSV_NAME)
-
-    # 3) Fallback: next to this script
-    return Path(__file__).resolve().parent / DEFAULT_CSV_NAME
-
-
-
-def resolve_data_csv(args, name="pythonLicenses.csv") -> Path:
-    """Resolve CSV by priority: CLI file > CLI dir > env file > env dir > fallback."""
-    # 1) CLI file
-    if args.csv_path:
-        return Path(args.csv_path)
-
-    # 2) CLI dir
-    if args.data_dir:
-        return Path(args.data_dir) / name
-
-    # 3) Env vars
-    env_file = os.environ.get("SNOOPY_CSV_PATH")
-    if env_file:
-        return Path(env_file)
-
-    env_dir = os.environ.get("SNOOPY_DATA_DIR")
-    if env_dir:
-        return Path(env_dir) / name
-
-    # 4) Fallback near this file (repo layout)
-    here = Path(__file__).resolve().parent
-    # Adjust if your file lives elsewhere
-    return here / "data" / name
 
 def main():
+    global lookup
+
     args = parse_args()
     csv_path = resolve_csv_from_args(args)
 
@@ -265,23 +279,13 @@ def main():
 
     print("Snoopy is running...")
 
-    # If you already had: lookup = load_license_lookup(csv_path="pythonLicenses.csv")
-    # change it to:
+    # Load CSV once into global lookup for the run
     lookup = load_license_lookup(csv_path=str(csv_path))
 
-    # Do NOT change your snoopy_entry_point signature if it didn't accept extra args
+    # Scan each target
     for t in (args.targets or ["."]):
         snoopy_entry_point(str(Path(t).resolve()))
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
